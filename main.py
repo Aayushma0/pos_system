@@ -173,10 +173,12 @@ def excel_mark_deleted(order_id: int):
 
 def init_database():
     with get_db() as db:
+        # Create tables
         db.execute("""CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL, icon TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        
         db.execute("""CREATE TABLE IF NOT EXISTS menu_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL, price DECIMAL(10,2) NOT NULL,
@@ -185,14 +187,12 @@ def init_database():
             stock_quantity INTEGER DEFAULT 999,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (category_id) REFERENCES categories(id))""")
-        try:
-            db.execute("ALTER TABLE menu_items ADD COLUMN image_url TEXT")
-        except:
-            pass
+        
         db.execute("""CREATE TABLE IF NOT EXISTS tables (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             table_number INTEGER UNIQUE NOT NULL,
             capacity INTEGER DEFAULT 4, status TEXT DEFAULT 'available')""")
+        
         db.execute("""CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             table_id INTEGER, order_number TEXT UNIQUE,
@@ -203,6 +203,7 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             completed_at TIMESTAMP,
             FOREIGN KEY (table_id) REFERENCES tables(id))""")
+        
         db.execute("""CREATE TABLE IF NOT EXISTS order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_id INTEGER, menu_item_id INTEGER,
@@ -210,33 +211,57 @@ def init_database():
             subtotal DECIMAL(10,2), notes TEXT,
             FOREIGN KEY (order_id) REFERENCES orders(id),
             FOREIGN KEY (menu_item_id) REFERENCES menu_items(id))""")
-
-        cursor = db.execute("SELECT COUNT(*) as count FROM categories")
-        if cursor.fetchone()['count'] == 0:
-            cats = [('Burgers','🍔'),('Pizzas','🍕'),('Salads','🥗'),
-                    ('Appetizers','🍤'),('Beverages','🥤'),('Desserts','🍰'),('Mains','🍽️')]
-            for c in cats:
-                db.execute("INSERT INTO categories (name, icon) VALUES (?, ?)", c)
-            items = [
-                ('Classic Cheeseburger',12.99,1,'Angus beef, cheddar cheese','🍔',999),
-                ('Spicy Chicken Burger',11.49,1,'Crispy chicken with spicy sauce','🍗',999),
-                ('Margherita Pizza',14.99,2,'Fresh mozzarella, basil','🍕',999),
-                ('Pepperoni Feast',16.49,2,'Double pepperoni, extra cheese','🍕',999),
-                ('Greek Salad',8.99,3,'Feta, olives, cucumber','🥗',999),
-                ('Crispy Calamari',9.49,4,'With lemon aioli','🦑',999),
-                ('Loaded Nachos',8.99,4,'Cheese, jalapeños','🌮',999),
-                ('Craft Soda',3.49,5,'Cola or Ginger Ale','🥤',999),
-                ('Iced Latte',4.99,5,'With oat milk option','☕',999),
-                ('Molten Lava Cake',6.99,6,'With vanilla ice cream','🍰',999),
-                ('Grilled Salmon',21.99,7,'Lemon butter sauce','🐟',999),
-                ('Steak Frites',24.99,7,'Sirloin steak with fries','🥩',999),
+        
+        # ========== ADD DEFAULT DATA ==========
+        
+        # Add tables 1-10 if none exist
+        table_count = db.execute("SELECT COUNT(*) FROM tables").fetchone()[0]
+        if table_count == 0:
+            print("Adding default tables...")
+            for i in range(1, 11):
+                db.execute("INSERT INTO tables (table_number, capacity) VALUES (?, ?)", (i, 4))
+        
+        # Add categories if none exist
+        cat_count = db.execute("SELECT COUNT(*) FROM categories").fetchone()[0]
+        if cat_count == 0:
+            print("Adding default categories...")
+            categories = [
+                ('Burgers', '🍔'),
+                ('Pizzas', '🍕'),
+                ('Salads', '🥗'),
+                ('Appetizers', '🍤'),
+                ('Beverages', '🥤'),
+                ('Desserts', '🍰'),
+                ('Mains', '🍽️')
             ]
-            for i in items:
-                db.execute("""INSERT INTO menu_items (name,price,category_id,description,icon,stock_quantity)
-                    VALUES (?,?,?,?,?,?)""", i)
-            for n in range(1, 11):
-                db.execute("INSERT INTO tables (table_number, capacity) VALUES (?, ?)", (n, 4))
-
+            for name, icon in categories:
+                db.execute("INSERT INTO categories (name, icon) VALUES (?, ?)", (name, icon))
+        
+        # Add menu items if none exist
+        item_count = db.execute("SELECT COUNT(*) FROM menu_items").fetchone()[0]
+        if item_count == 0:
+            print("Adding default menu items...")
+            menu_items = [
+                ('Classic Cheeseburger', 12.99, 1, 'Angus beef, cheddar cheese', '🍔'),
+                ('Spicy Chicken Burger', 11.49, 1, 'Crispy chicken with spicy sauce', '🍗'),
+                ('Margherita Pizza', 14.99, 2, 'Fresh mozzarella, basil', '🍕'),
+                ('Pepperoni Feast', 16.49, 2, 'Double pepperoni, extra cheese', '🍕'),
+                ('Greek Salad', 8.99, 3, 'Feta, olives, cucumber', '🥗'),
+                ('Crispy Calamari', 9.49, 4, 'With lemon aioli', '🦑'),
+                ('Loaded Nachos', 8.99, 4, 'Cheese, jalapeños', '🌮'),
+                ('Craft Soda', 3.49, 5, 'Cola or Ginger Ale', '🥤'),
+                ('Iced Latte', 4.99, 5, 'With oat milk option', '☕'),
+                ('Molten Lava Cake', 6.99, 6, 'With vanilla ice cream', '🍰'),
+                ('Grilled Salmon', 21.99, 7, 'Lemon butter sauce', '🐟'),
+                ('Steak Frites', 24.99, 7, 'Sirloin steak with fries', '🥩'),
+            ]
+            for name, price, cat_id, desc, icon in menu_items:
+                db.execute("""INSERT INTO menu_items (name, price, category_id, description, icon, is_available, stock_quantity)
+                    VALUES (?, ?, ?, ?, ?, 1, 999)""", (name, price, cat_id, desc, icon))
+        
+        print("Database initialized with default data!")
+        print("=== Starting Restaurant POS App ===")
+        print("Initializing database...")
 init_database()
 
 # ─── Pydantic Models ────────────────────────────────────────────────────────
