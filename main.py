@@ -17,12 +17,19 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-app = FastAPI(title="Restaurant POS System")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads")
+EXPORTS_DIR = os.path.join(BASE_DIR, "exports")
+RECEIPTS_DIR = os.path.join(BASE_DIR, "receipts")
+DATABASE = os.path.join(BASE_DIR, "pos_system.db")
 
-os.makedirs("receipts", exist_ok=True)
-os.makedirs("static", exist_ok=True)
-os.makedirs("exports", exist_ok=True)
-os.makedirs("static/uploads", exist_ok=True)
+os.makedirs(RECEIPTS_DIR, exist_ok=True)
+os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs(EXPORTS_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+app = FastAPI(title="Restaurant POS System")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +53,7 @@ def get_db():
 
 # ─── Excel helper ──────────────────────────────────────────────────────────
 
-EXCEL_FILE = "exports/orders_export.xlsx"
+EXCEL_FILE = os.path.join(EXPORTS_DIR, "orders_export.xlsx")
 EXCEL_HEADERS = [
     'Order #', 'Table', 'Date & Time', 'Items', 'Subtotal (RS)',
     'Tax (5%)', 'Total (RS)', 'Payment Method', 'Payment Status', 'Note'
@@ -289,7 +296,7 @@ class MenuItemCreate(BaseModel):
     price: float
     category_id: int
     description: Optional[str] = ""
-    icon: Optional[str] = "🍽️"
+    icon: Optional[str] = ""
     image_url: Optional[str] = ""
 
 class MenuItemUpdate(BaseModel):
@@ -297,7 +304,7 @@ class MenuItemUpdate(BaseModel):
     price: float
     category_id: int
     description: Optional[str] = ""
-    icon: Optional[str] = "🍽️"
+    icon: Optional[str] = ""
     image_url: Optional[str] = ""
 
 class AvailabilityUpdate(BaseModel):
@@ -317,7 +324,7 @@ async def upload_image(file: UploadFile = File(...)):
             return {"success": False, "message": "Only JPG/PNG/GIF/WEBP allowed"}
         ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "jpg"
         filename = f"{uuid.uuid4().hex}.{ext}"
-        dest = os.path.join("static", "uploads", filename)
+        dest = os.path.join(UPLOAD_DIR, filename)
         with open(dest, "wb") as f:
             shutil.copyfileobj(file.file, f)
         return {"success": True, "url": f"/static/uploads/{filename}"}
@@ -718,5 +725,5 @@ def download_excel():
     return FileResponse(EXCEL_FILE, filename="orders_export.xlsx",
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-app.mount("/static", StaticFiles(directory="static"), name="static_files")
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_files")
+app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
