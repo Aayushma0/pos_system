@@ -1798,7 +1798,10 @@ body {
 <div class="toast-wrap" id="toasts"></div>
 
 <script>
-const API = 'http://localhost:8000/api';
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:8000/api'
+  : 'https://pos-system-4f9g.onrender.com/api';
+
 let tables=[], menuItems=[], categories=[], allMenuItems=[];
 let currentOrder = { tableId:null, tableName:null, items:[] };
 let activeOrder = null;
